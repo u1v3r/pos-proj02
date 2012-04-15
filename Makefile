@@ -2,10 +2,16 @@
 
 PNAME=proj02
 CC=gcc
-CFLAGS=-Wall -ansi -g -O $(PNAME).c -o $(PNAME)
+CCS=cc
+SOLARIS=-mt -O -o $(PNAME) $(PNAME).c -lpthread
+CFLAGS=-pthread -Wall -ansi -g -O $(PNAME).c -o $(PNAME)
 
 
-build:
+linux:
 	$(CC) $(CFLAGS)
+
+solaris:
+	$(CCS) $(SOLARIS)
+
 clean:
 	rm -f $(PNAME)
