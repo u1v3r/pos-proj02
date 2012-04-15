@@ -1,8 +1,8 @@
 /*------------------------------------------------------------------------------
 
+    2. Projekt na POS - ticket algoritmus
 
-
-
+    Autor: Radovan Dvorsky, xdvors08
 
 ------------------------------------------------------------------------------*/
 
@@ -68,7 +68,11 @@ int main(int argc, char* argv[]){
         print_help();
         return 1;
     }
-
+    
+    if((res = pthread_mutex_init(&mutex,NULL)) != 0){
+        printf("pthread_mutex_init() error %d\n",res);
+        return 1;
+    }
 
     /* Vytvorenie zadaneho poctu vlakien */
     if((res = pthread_attr_init(&attr)) != 0){
@@ -105,7 +109,7 @@ int main(int argc, char* argv[]){
 
     for (i = 0 ;  i < threads_count;  i++){
         if ((res = pthread_join(thread_t[i],NULL)) != 0){
-            printf("pthread_attr_init() err %d\n",res);
+            printf("pthread_attr_join() error %d\n",res);
             return 1;
         }
     }
@@ -170,7 +174,7 @@ void *thread_fnc(void *thread_id){
         random_wait(id);
         /* kazde vlakno caka na vstup do KS */
         await(ticket);                                  /* Vstup do KS */
-        printf("%d\t(%d)\n", ticket, (int)id+1);             /* fflush(stdout); */
+        printf("%d\t(%d)\n", ticket, (int)id+1);        /* fflush(stdout); */
         advance();                                      /* Výstup z KS */
         random_wait(id);
     }
