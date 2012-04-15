@@ -1,24 +1,19 @@
 # Makefile pre proj02
+# ! na preklad treba pouzit gmake !
 
-PNAME=proj02
-CC=gcc
-CCS=cc
-SOLARIS=-mt -O -o $(PNAME) $(PNAME).c -lpthread
-CFLAGS=-pthread -Wall -ansi -g -O $(PNAME).c -o $(PNAME)
-uname_S:=$(shell sh -c 'uname -s 2>/dev/null || echo not')
+CC = gcc
+CFLAGS = -Wall -ansi -pthread -g -O $(PNAME).c -o $(PNAME)
+PNAME = proj02
+unameOS := $(shell sh -c 'uname -s 2>/dev/null || echo not')
+
+ifeq ($(unameOS),SunOS)
+	CC = cc
+	CFLAGS = -mt -O -o $(PNAME) $(PNAME).c -lpthread
+endif
 
 
 build: $(PNAME).c
-ifeq ($(uname_S),Linux)
 	$(CC) $(CFLAGS)
-endif
-ifeq ($(OS),FreeBSD)
-	$(CC) $(CFLAGS)
-endif
-ifeq ($(OS),SunOS)
-	$(CCS) $(SOLARIS)
-endif
-
 
 clean: $(PNAME).c
 	rm -f $(PNAME)
