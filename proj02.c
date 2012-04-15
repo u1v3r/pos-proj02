@@ -1,9 +1,16 @@
+/*------------------------------------------------------------------------------
+
+
+
+
+
+------------------------------------------------------------------------------*/
+
 #define _POSIX_C_SOURCE 199506L
 #define _XOPEN_SOURCE
 #define _XOPEN_SOURCE_EXTENDED 1
 
-#define DEBUG
-#define NO_TICKET -1
+/*#define DEBUG*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,24 +20,30 @@
 #include <time.h>
 
 
+/** Prideli ticket vlaknu */
 int getticket(void);
+
+/** Vpusti len jedno vlakno s platnym ticketom */
 void await(int aenter);
+
+/** Inkrementuje aktualne cislo ticketu a odblokuje dalsie vlakno */
 void advance(void);
+
+/** Obsluzi vlakno */
 void *thread_fnc(void *thread_id);
+
+/** Caka 0 - 0.5 s */
 void random_wait(int thread_id);
+
+/** Na vystup vypise napovedu */
 void print_help(void);
 
 
-struct thread_s{
-    volatile int ticket;
-    pthread_t thread_pt;
-};
-
-struct thread_s *thread_t;
+pthread_t *thread_t;                         /* pole vlakien */
 int threads_count = 0;                       /* pocet vytvorenych vlakien */
 int pass_count = 0;                          /* pocet prechodov kritickou sekciou (KS) */
 volatile sig_atomic_t actual_ticket = 0;     /* obsahuje aktualny ticket */
-volatile sig_atomic_t counter = 0;
+volatile sig_atomic_t counter = 0;           /* vyuziva sa na vytvarnie ticketov */
 pthread_mutex_t mutex;
 pthread_cond_t cond;
 
@@ -38,7 +51,8 @@ pthread_cond_t cond;
 int main(int argc, char* argv[]){
 
     pthread_attr_t attr;
-    int res,i;
+    int res;
+    intptr_t i; /* nech nevyhadzuje warning pri predavani do thread_fnc()*/
 
     /* spracovanie parametrov */
     if(argc == 3){
@@ -67,25 +81,30 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    thread_t = (struct thread_s *)malloc(sizeof(struct thread_s) * threads_count);
+    if((res = pthread_cond_init(&cond,NULL)) != 0){
+        printf("pthread_cond_init() error %d\n",res);
+        return 1;
+    }
 
-    pthread_cond_init(&cond,NULL);
+    /* alokacia pamate pre thready */
+    thread_t = (pthread_t *)malloc(sizeof(pthread_t) * threads_count);
 
     for(i = 0; i < threads_count; i++){
         /* Vytvori vlakna a prem. i bude id vlakna */
-        if((res = pthread_create(&thread_t[i].thread_pt,&attr,thread_fnc,(void *)i)) != 0){
+        if((res = pthread_create(&thread_t[i],&attr,thread_fnc,(void *)i)) != 0){
             printf("pthread_create() error %d\n",res);
             return 1;
         }
     }
 
+    /* atributy uz netreba */
     if((res = pthread_attr_destroy(&attr)) != 0){
         printf("pthread_attr_destroy() error %d\n",res);
         return 1;
     }
 
     for (i = 0 ;  i < threads_count;  i++){
-        if ((res = pthread_join(thread_t[i].thread_pt,NULL)) != 0){
+        if ((res = pthread_join(thread_t[i],NULL)) != 0){
             printf("pthread_attr_init() err %d\n",res);
             return 1;
         }
@@ -104,7 +123,6 @@ int getticket(void){
     pthread_mutex_unlock(&mutex);
 
     return number;
-
 }
 
 void await(int aenter){
@@ -120,6 +138,7 @@ void await(int aenter){
     while(actual_ticket != aenter)
         pthread_cond_wait(&cond,&mutex);
 
+    /* vystupuje len thread s platnym ticketom */
     #ifdef DEBUG
         printf("vystupuje ticket %d\n",aenter);
     #endif
@@ -131,12 +150,12 @@ void await(int aenter){
 void advance(void){
 
     #ifdef DEBUG
-        printf("je v advance\n");
+        printf("thread je v advance\n");
     #endif
 
     pthread_mutex_lock(&mutex);
-    actual_ticket++;
-    pthread_cond_broadcast(&cond);
+    actual_ticket++;                    /* inkrementuje aktualny ticket */
+    pthread_cond_broadcast(&cond);      /* zobudi vsetky vlakna a tie si skontroluju ticket */
     pthread_mutex_unlock(&mutex);
 
     return;
@@ -145,19 +164,18 @@ void advance(void){
 void *thread_fnc(void *thread_id){
 
     int ticket;
-    int id = (int)thread_id;
+    intptr_t id = (intptr_t)thread_id;
 
     while ((ticket = getticket()) < pass_count){
         random_wait(id);
         /* kazde vlakno caka na vstup do KS */
         await(ticket);                                  /* Vstup do KS */
-        printf("%d\t(%d)\n", ticket, id+1);               /* fflush(stdout); */
+        printf("%d\t(%d)\n", ticket, (int)id+1);             /* fflush(stdout); */
         advance();                                      /* Výstup z KS */
         random_wait(id);
     }
 
-
-    return (void *)1;
+    return (void *) 1;
 }
 
 void random_wait(int thread_id){
