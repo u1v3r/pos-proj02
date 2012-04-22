@@ -175,7 +175,7 @@ void *thread_fnc(void *thread_id){
         /* kazde vlakno caka na vstup do KS */
         await(ticket);                                  /* Vstup do KS */
         printf("%d\t(%d)\n", ticket, (int)id+1);        /* fflush(stdout); */
-        advance();                                      /* Vystup z KS */
+        advance();                                      /* Výstup z KS */
         random_wait(id);
     }
 
